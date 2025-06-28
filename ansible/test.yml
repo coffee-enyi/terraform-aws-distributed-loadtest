@@ -1,0 +1,14 @@
+---
+- name: Test connectivity and uptime
+  hosts: webservers
+  become: yes
+
+  tasks:
+    - name: Ping the server
+      ansible.builtin.ping:
+
+    - name: Check uptime
+      ansible.builtin.command: uptime
+
+    - name: Show whoami
+      ansible.builtin.command: whoami
