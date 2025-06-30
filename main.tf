@@ -23,7 +23,7 @@ resource "tls_private_key" "ssh" {
 # key made available for ansible
 resource "local_file" "private_key" {
   content         = tls_private_key.ssh.private_key_pem
-  filename        = "${path.module}/artillery-key.pem"
+  filename        = "${path.module}/ansible/artillery-key.pem"
   file_permission = "0600"
 }
 
@@ -72,8 +72,8 @@ resource "aws_security_group" "us_east_sg" {
   vpc_id = aws_vpc.us_east_vpc.id
 
   ingress {
-    from_port = 2222
-    to_port = 2222
+    from_port = 22
+    to_port = 22
     protocol = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -92,8 +92,8 @@ resource "aws_key_pair" "us_east_key" {
   public_key = tls_private_key.ssh.public_key_openssh
 }
 
-resource "aws_instance" "us_east_artillery" {
-  count = 4
+resource "aws_spot_instance_request" "us_east_artillery" {
+  count = var.no_of_instances
   provider = aws.us_east
   ami = "ami-020cba7c55df1f615"
   instance_type = var.instance_type
@@ -101,6 +101,12 @@ resource "aws_instance" "us_east_artillery" {
   subnet_id = aws_subnet.us_east_subnet.id
   associate_public_ip_address = true
   vpc_security_group_ids = [aws_security_group.us_east_sg.id]
+
+  root_block_device {
+    volume_size = 29
+    volume_type = "gp3"
+  }
+
   tags = {
     Name = "artillery-shell-${count.index}"
   }
@@ -151,8 +157,8 @@ resource "aws_security_group" "eu_west_sg" {
   vpc_id = aws_vpc.eu_west_vpc.id
 
   ingress {
-    from_port = 2222
-    to_port = 2222
+    from_port = 22
+    to_port = 22
     protocol = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -171,8 +177,8 @@ resource "aws_key_pair" "eu_west_key" {
   public_key = tls_private_key.ssh.public_key_openssh
 }
 
-resource "aws_instance" "eu_west_artillery" {
-  count = 4
+resource "aws_spot_instance_request" "eu_west_artillery" {
+  count = var.no_of_instances
   provider = aws.eu_west
   ami = "ami-01f23391a59163da9"
   instance_type = var.instance_type
@@ -180,6 +186,12 @@ resource "aws_instance" "eu_west_artillery" {
   subnet_id = aws_subnet.eu_west_subnet.id
   associate_public_ip_address = true
   vpc_security_group_ids = [aws_security_group.eu_west_sg.id]
+
+  root_block_device {
+    volume_size = 29
+    volume_type = "gp3"
+  }
+
   tags = {
     Name = "artillery-missile-${count.index}"
   }
@@ -230,8 +242,8 @@ resource "aws_security_group" "ap_southeast_sg" {
   vpc_id = aws_vpc.ap_southeast_vpc.id
 
   ingress {
-    from_port = 2222
-    to_port = 2222
+    from_port = 22
+    to_port = 22
     protocol = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -250,8 +262,8 @@ resource "aws_key_pair" "ap_southeast_key" {
   public_key = tls_private_key.ssh.public_key_openssh
 }
 
-resource "aws_instance" "ap_southeast_artillery" {
-  count = 4
+resource "aws_spot_instance_request" "ap_southeast_artillery" {
+  count = var.no_of_instances
   provider = aws.ap_southeast
   ami = "ami-02c7683e4ca3ebf58"
   instance_type = var.instance_type
@@ -259,6 +271,12 @@ resource "aws_instance" "ap_southeast_artillery" {
   subnet_id = aws_subnet.ap_southeast_subnet.id
   associate_public_ip_address = true
   vpc_security_group_ids = [aws_security_group.ap_southeast_sg.id]
+
+  root_block_device {
+    volume_size = 29
+    volume_type = "gp3"
+  }
+
   tags = {
     Name = "artillery-mortar-${count.index}"
   }
@@ -269,13 +287,13 @@ resource "aws_instance" "ap_southeast_artillery" {
 # =============================
 
 output "us_east_ips" {
-  value = aws_instance.us_east_artillery[*].public_ip
+  value = aws_spot_instance_request.us_east_artillery[*].public_ip
 }
 
 output "eu_west_ips" {
-  value = aws_instance.eu_west_artillery[*].public_ip
+  value = aws_spot_instance_request.eu_west_artillery[*].public_ip
 }
 
 output "ap_southeast_ips" {
-  value = aws_instance.ap_southeast_artillery[*].public_ip
+  value = aws_spot_instance_request.ap_southeast_artillery[*].public_ip
 }

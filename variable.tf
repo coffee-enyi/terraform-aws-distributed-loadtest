@@ -1,11 +1,9 @@
-variable "key_name" {
-  description = "Name of the existing SSH key pair in AWS"
-  default     = "ansible-key.pem"
-}
+# Adjust instance amount and type below based on expected traffic volume and available budget.
+# More instances increase load generation capacity, but also cost!
 
-variable "ami" {
-    description = "AMI ID for the Artillery node instances"
-    default     = "ami-020cba7c55df1f615" 
+variable "no_of_instances" {
+    description = "Number of instances that is to be created by Terraform in each region"
+    default     = 5 
 }
 
 variable "instance_type" {

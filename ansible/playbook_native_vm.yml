@@ -1,0 +1,55 @@
+---
+- name: Native Artillery Load Test Runner
+  hosts: all
+  become: yes
+
+  vars:
+    artillery_dir: "/home/{{ ansible_user }}/artillery"
+    test_file: loadtest.yml
+    output_file: "report-{{ test_count }}.json"
+
+  tasks:
+    - name: Ensure artillery directory exists
+      file:
+        path: "{{ artillery_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Copy loadtest.yml into artillery directory
+      copy:
+        src: ../loadtest.yml
+        dest: "{{ artillery_dir }}/{{ test_file }}"
+        mode: '0644'
+
+    - name: Install curl and prerequisite packages
+      apt:
+        name:
+          - curl
+          - ca-certificates
+        state: present
+        update_cache: yes
+
+    - name: Add Node.js 18.x APT repository
+      shell: |
+        curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+      args:
+        creates: /etc/apt/sources.list.d/nodesource.list
+
+    - name: Install Node.js
+      apt:
+        name: nodejs
+        state: present
+        update_cache: yes
+
+    - name: Install artillery globally
+      npm:
+        name: artillery
+        global: yes
+        state: present
+
+    - name: Run Artillery test
+      command: >
+        artillery run {{ artillery_dir }}/{{ test_file }}
+        --output {{ artillery_dir }}/{{ output_file }}
+      environment:
+        PATH: "/usr/bin:/usr/local/bin:/bin"

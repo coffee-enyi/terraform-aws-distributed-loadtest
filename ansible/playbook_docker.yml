@@ -1,0 +1,67 @@
+---
+- name: Run Artillery Load Test in Docker
+  hosts: all
+  become: yes
+
+  vars:
+    artillery_dir: /home/{{ ansible_user }}/artillery
+    docker_image: sweetenyi/artillery-runner:1.0.0
+    test_file: loadtest.yml
+    output_file: "report-{{ test_count }}.json"
+
+  tasks:
+
+    - name: Ensure artillery directory exists
+      file:
+        path: "{{ artillery_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Copy loadtest.yml into artillery directory
+      copy:
+        src: ../loadtest.yml
+        dest: "{{ artillery_dir }}/{{ test_file }}"
+        mode: '0644'
+
+    - name: Install required packages for Docker
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+        update_cache: yes
+
+    - name: Add Docker's official GPG key
+      shell: |
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+      args:
+        creates: /usr/share/keyrings/docker-archive-keyring.gpg
+
+    - name: Set up the stable Docker repository
+      shell: |
+        echo \
+        "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] \
+        https://download.docker.com/linux/ubuntu \
+        $(lsb_release -cs) stable" | \
+        sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+    - name: Install Docker Engine
+      apt:
+        name: docker-ce
+        state: present
+        update_cache: yes
+
+    - name: Pull artillery-runner image
+      docker_image:
+        name: "{{ docker_image }}"
+        source: pull
+
+    - name: Run Artillery test in Docker container
+      command: >
+        docker run --rm
+        -v {{ artillery_dir }}:/app
+        {{ docker_image }}
+        artillery run /app/{{ test_file }}
+        --output /app/{{ output_file }}

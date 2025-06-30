@@ -5,6 +5,8 @@
 *.tfvars
 .terraform/
 .terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.backup
 terraform.tfvars
 terraform.plan
 *.log
@@ -15,3 +17,8 @@ ansible/*.log
 ansible/results/
 ansible/*.retry
 *.pem
+
+loadtest.yml
+
+logs/
+results/

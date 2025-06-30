@@ -1,0 +1,25 @@
+---
+- name: Fetch Artillery reports from all servers
+  hosts: all
+  become: false
+  gather_facts: no
+
+  vars:
+    report_filename: "report-{{ test_count | default('latest') }}.json"
+    remote_report_path: "~/artillery/{{ report_filename }}"
+    # results_dir: "../results"
+
+  tasks:
+    - name: Ensure local results directory exists
+      delegate_to: localhost
+      run_once: true
+      file:
+        path: "../{{ results_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Fetch {{ report_filename }} from each server
+      fetch:
+        src: "{{ remote_report_path }}"
+        dest: "../{{ results_dir }}/{{ group_names[0] }}__{{ inventory_hostname }}__{{ report_filename }}"
+        flat: yes

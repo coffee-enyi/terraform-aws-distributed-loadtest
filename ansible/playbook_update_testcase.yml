@@ -1,0 +1,65 @@
+---
+- name: Update and Run Artillery Test
+  hosts: all
+  become: yes
+
+  vars:
+    artillery_dir: "/home/ubuntu/artillery"
+    test_file: loadtest.yml
+    output_file: "report-{{ test_count }}.json"
+    mode: "{{ mode | default('docker') }}"
+
+  tasks:
+    - name: Ensure artillery directory exists
+      file:
+        path: "{{ artillery_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Copy new loadtest.yml into artillery directory
+      copy:
+        src: ../{{ test_file }}
+        dest: "{{ artillery_dir }}/{{ test_file }}"
+        mode: '0644'
+
+    - name: Check if Docker Artillery container is already running
+      shell: docker ps --filter "ancestor=artillery-runner" --format '{{"{{"}}.ID{{"}}"}}'
+      register: docker_check
+      when: mode == "docker"
+      changed_when: false
+      failed_when: false
+
+    - name: Check if native Artillery is already running
+      shell: pgrep -f "artillery run"
+      register: native_check
+      when: mode == "native"
+      changed_when: false
+      failed_when: false
+
+    - name: Kill native Artillery process if running
+      shell: pkill -f "artillery run" || true
+      when: mode == "native" and native_check.stdout is defined and native_check.stdout != ""
+      changed_when: true
+      ignore_errors: true
+
+    - name: Fail if Docker test is already running
+      fail:
+        msg: "An Artillery test is still running in Docker on this host. Aborting."
+      when: mode == "docker" and docker_check.stdout != ""
+
+    - name: Run artillery in Docker mode
+      command: >
+        docker run --rm
+        -v {{ artillery_dir }}:/app
+        sweetenyi/artillery-runner:1.0.0
+        artillery run /app/{{ test_file }}
+        --output /app/{{ output_file }}
+      when: mode == "docker"
+
+    - name: Run artillery in Native mode
+      command: >
+        artillery run {{ artillery_dir }}/{{ test_file }}
+        --output {{ artillery_dir }}/{{ output_file }}
+      environment:
+        PATH: "/usr/bin:/usr/local/bin:/bin"
+      when: mode == "native"
